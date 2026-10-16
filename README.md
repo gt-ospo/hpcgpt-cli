@@ -11,6 +11,7 @@ hpcGPT is a shared CLI foundation built on top of the `Opencode` agent for HPC c
 
 - [`NCSA/`](NCSA/) — NCSA deployment for Delta (support assistant, MCP servers, site module install)
 - [`OSC/`](OSC/) - OSC-specific deployment
+- [`PACE/`](PACE/) - Georgia Tech PACE deployment for Phoenix (in progress)
 
 
 ## TL;DR - Getting Started

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  // No "provider"/"enabled_providers" for now -- this uses opencode's
+  // default free model.
+  //
+  // opencode has no native sandboxing for its bash tool, so this pulls in
+  // a third-party plugin that wraps bash commands in bwrap (Linux) /
+  // sandbox-exec (macOS): writes confined to the project dir + /tmp,
+  // .ssh/.aws/credentials blocked, network allowlisted. It's unrelated to
+  // the Slurm MCP server above -- that's a separate process opencode
+  // spawns directly, never routed through the bash tool, so it's
+  // unaffected either way. No documented way to pin a version, so this
+  // resolves to latest from npm on every opencode start.
+  "plugin": ["opencode-sandbox"],
+  "mcp": {
+    "slurm-mcp-server": {
+      "type": "local",
+      // PACE_SLURM_CAPS is exported by deploy.sh, pointing at the
+      // per-account *.slurm_caps.json it wrote (e.g.
+      // gts-myproject.slurm_caps.json) -- not a static path, since the
+      // filename depends on which account you deployed with.
+      "command": [
+        "{env:HPCGPT_ROOT}/PACE/mcp_servers/slurm_server/.venv/bin/python",
+        "{env:HPCGPT_ROOT}/PACE/mcp_servers/slurm_server/server.py",
+        "--config",
+        "{env:PACE_SLURM_CAPS}"
+      ],
+      "enabled": true
+    }
+  },
+  "command": {
+  },
+  "share": "disabled",
+  "permission": {
+    "edit": {
+      // Everything else still asks; any *.slurm_caps.json cap config
+      // (enforced as a required suffix server-side, see server.py's
+      // load_config) can never be touched by the agent's edit tool,
+      // regardless of per-project prefix or directory. Regenerate/edit it
+      // yourself (e.g. via deploy.sh) instead.
+      "*": "ask",
+      "**/*.slurm_caps.json": "deny"
+    },
+    // Raw Slurm CLI commands are denied outright (not just "ask") so the
+    // agent is forced to the slurm-mcp-server tools above instead -- those
+    // are the capped, typed path; these are neither. Both bare and
+    // with-args forms are listed since bash permission patterns match the
+    // whole command string.
+    "bash": {
+      "*": "ask",
+      "sinfo": "deny",
+      "sinfo *": "deny",
+      "squeue": "deny",
+      "squeue *": "deny",
+      "sbatch": "deny",
+      "sbatch *": "deny",
+      "salloc": "deny",
+      "salloc *": "deny",
+      "srun": "deny",
+      "srun *": "deny",
+      "scancel": "deny",
+      "scancel *": "deny",
+      "scontrol": "deny",
+      "scontrol *": "deny",
+      "sacct": "deny",
+      "sacct *": "deny"
+    }
+  },
+  // See prompts/slurm-tools.md -- tells the agent to use the MCP tools
+  // instead of the (denied) raw commands above, rather than leaving it to
+  // discover that only by having every attempt fail.
+  "instructions": ["client-deployment/prompts/slurm-tools.md"]
+}

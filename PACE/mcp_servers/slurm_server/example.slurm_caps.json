@@ -1,0 +1,11 @@
+{
+  "account": "gts-your-project",
+  "qos": {
+    "inferno": [
+      { "partitions": ["cpu-small"], "limit": "30m" }
+    ],
+    "embers": [
+      { "allow-all-partitions": true, "no-limit": true }
+    ]
+  }
+}
