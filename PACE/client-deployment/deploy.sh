@@ -149,7 +149,11 @@ fi
 # missing/broken) -- silently, with no indication anything was skipped.
 # Enforce makes that failure loud (blocked bash calls) instead of a
 # silent no-op that looks identical to a working sandbox.
-SANDBOX_CONFIG=$(printf '{"mode":"enforce","filesystem":{"allowWrite":[".", "/tmp", "%s/scratch"]}}' "$HOME")
+#
+# denyRead blocks all of $HOME as it contains all user files including binaries
+# and the caps.toml, of which this may be one. It's better to allowRead per
+# directory.
+SANDBOX_CONFIG=$(printf '{"mode":"enforce","filesystem":{"allowWrite":[".", "/tmp", "%s/scratch"],"denyRead":["%s"],"allowRead":[".", "/tmp", "%s/scratch"]}}' "$HOME" "$HOME" "$HOME")
 
 cat <<EOF
 
