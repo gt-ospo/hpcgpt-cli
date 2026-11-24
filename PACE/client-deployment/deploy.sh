@@ -1,19 +1,13 @@
 #!/usr/bin/env bash
-# Sets up opencode + the capped Slurm MCP server for this PACE deployment.
-# Run on the Phoenix login/submit node you intend to use opencode from --
-# the MCP server is spawned as a local subprocess, so it needs sbatch/squeue
-# on PATH right here (see ../../connecting-agent-to-cluster.md if you
-# instead want to run opencode off-cluster).
+# Sets up opencode + the sandboxed Slurm MCP server for this PACE deployment.
+# Run this script on the Phoenix login node.
 #
-# `module load python` first -- without it, the system default python3 on
+# `module load python` first -- without it, the system default (Python 3.9) on
 # PATH is too old for this server.
 #
-# If socat isn't already available, this compiles it from source (see
-# below) -- for that first run, get a compute-node allocation rather than
-# building on the shared login node:
-#   salloc --account=<slurm-account>
-# socat only needs building once (cached under .local/bin/), so this only
-# matters the first time; later runs/opencode sessions don't need salloc.
+# This script compiles/installs socat and rg (ripgrep) to ~/.local/bin, which
+# is used by the sandboxing code, on the first run. In this case, you should run
+# this script on a compute node.
 set -euo pipefail
 
 usage() {
@@ -78,8 +72,10 @@ PY
 fi
 
 echo "== Checking opencode-sandbox's runtime deps (ripgrep, socat) =="
-VENDOR_BIN="$PACE_DIR/.local/bin"
-PATH_EXPORT_LINE=""
+VENDOR_BIN="$HOME/.local/bin"
+mkdir -p "$VENDOR_BIN"
+export PATH="$VENDOR_BIN:$PATH"
+PATH_EXPORT_LINE="export PATH=$VENDOR_BIN:\$PATH"
 
 if ! command -v rg >/dev/null 2>&1; then
     module load ripgrep 2>/dev/null || true
@@ -88,7 +84,6 @@ if command -v rg >/dev/null 2>&1; then
     echo "rg found: $(command -v rg)"
 else
     echo "rg not found -- fetching a static binary into $VENDOR_BIN"
-    mkdir -p "$VENDOR_BIN"
     RG_VERSION=15.2.0
     RG_TARBALL="ripgrep-$RG_VERSION-x86_64-unknown-linux-musl.tar.gz"
     # Pinned against the .sha256 file GitHub publishes alongside the release
@@ -104,7 +99,6 @@ else
     chmod +x "$VENDOR_BIN/rg"
     rm -rf "$RG_TMP"
     echo "Installed rg $RG_VERSION to $VENDOR_BIN/rg"
-    PATH_EXPORT_LINE="export PATH=$VENDOR_BIN:\$PATH"
 fi
 
 if ! command -v socat >/dev/null 2>&1; then
@@ -123,7 +117,6 @@ else
     fi
 
     echo "socat not found -- building from source into $VENDOR_BIN"
-    mkdir -p "$VENDOR_BIN"
     SOCAT_VERSION=1.8.1.3
     # dest-unreach.org doesn't publish a checksum or signature for this
     # tarball (checked: nothing on the download page, no .sig/.asc
@@ -145,7 +138,6 @@ else
     chmod +x "$VENDOR_BIN/socat"
     rm -rf "$SOCAT_TMP"
     echo "Built socat $SOCAT_VERSION to $VENDOR_BIN/socat"
-    PATH_EXPORT_LINE="export PATH=$VENDOR_BIN:\$PATH"
 fi
 
 # opencode-sandbox's allowWrite replaces its defaults rather than extending
